@@ -1,0 +1,97 @@
+# Copyright 2019, Oath Inc.
+# Licensed under the terms of the Apache License, Version 2.0. See LICENSE file for terms.
+
+# Ariel Example configuration file
+DEFAULTS:
+    AWS_REGION:              # Default: Lambda invocation region
+    LOG_LEVEL:               # Override for debugging.  Default: INFO
+    CACHING:                 # Default: False, useful for debugging
+
+MASTER:
+    ACCOUNT_ID:              # Master Billing account to use for Athena, Organizations, and Reserved Instances queries.  Default: Lambda invocation account
+    ROLE:                    # Role to assume in master account.  Default: arn:aws:iam::{MASTER:ACCOUNT_ID}:role/ariel-master-usage
+
+ATHENA:
+    AWS_REGION:              # Region to execute Athena Query in.  Default: DEFAULTS:AWS_REGION
+    CUR_DATABASE: required   # Name of the CUR database.  This should be determined by your CUR export configuration
+    STAGING:                 # Temporary S3 bucket for Athena processing.
+                             # Default: s3://aws-athena-query-results-${AWS::AccountId}-${AWS::Region}/ariel-cur-output/'
+    DAYS:                    # Number of days to analyze.  Default: 28
+    OFFSET:                  # Number of days offset from today to analyze.  Default: 1 (end at midnight yesterday)
+
+ACCOUNT_NAMES: # If Neither Organizations nor File configurations are present, accounts will be reported by their ID.
+    RETRIES:                 # Maximum number of retries when retrieving the next page of accounts.  Default: 5
+    FILE:                    # YAML file or S3 object to load account names from.  Default: Do not load from file
+
+PRICING:
+    URL:                     # Default: https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/index.json
+
+LOCATIONS:
+    'EU (Paris)': eu-west-3  # Optional method to add new AWS Regions -- This should not be needed unless calling ec2_pricing directly.
+                             # Normal invocation retrieves location map from CUR.
+
+CSV_REPORTS:                 # Specify file:// or s3:// path to persist CSV
+    RI_PURCHASES:    file://output-ri-purchases.csv
+    RI_USAGE:        file://output-ri-usage.csv
+    RI_HOURLY_USAGE: file://output-ri-hourly-usage.csv
+    UNUSED_AZ_RIS:   file://output-unused-az-ris.csv
+    UNLIMITED:       file://output-unlimited-usage.csv
+    UNUSED_BOX:      file://output-unused-box.csv
+
+PG_REPORTS:                   # Specify tablename to persist to database
+    DB_HOST:                  # PostgresDB to post results to.  Default: None
+    CONNECT_HOST:             # Host to connect to for proxying  Default: DB_HOST
+    ACCOUNT_INSTANCE_SUMMARY: # account_instance_summary
+    RI_PURCHASES:             # reserved_instances_recommendations
+    RI_USAGE:                 # reserved_instances_usage
+    RI_HOURLY_USAGE:          # reserved_instances_hourly_usage
+    UNUSED_AZ_RIS:            # unused_az_ris
+    UNLIMITED:                # unlimited_usage
+    UNUSED_BOX:               # unused_box
+
+RI_PURCHASES:
+    FILTER_THRESHOLD: 3      # Threshold for reducing noise on instances slope fit (THRESHOLD below)
+    RI_TERM: 36              # Term for RIs to be purchased.  12 or 36.  Default: 36
+    RI_OPTION: No Upfront    # Purchasing Option.  If selected option is not available, all options will be attempted
+                             #     in order [ 'No Upfront', 'Partial Upfront', 'All upfront' ]
+    RI_SIZE: xlarge          # Preferred size to purchase RIs.  If size is not available for an specific family,
+                             #     this will resolve to the largest size less than this size, or the smallest size
+                             #     if no sizes smaller than this are available.  Additional values: smallest, largest
+
+    # THRESHOLD: Thresholds are against the slope of running instances, specifically units per day.  For example,
+    #            a threshold of 1000 means an average daily increase of 125xlarge instances of the type being evaluated.
+    #            AGGRESSIVE_THRESHOLD is >= this value, CONSERVATIVE_THRESHOLD is <= the value.
+    #            An empty threshold will not be evaluated.
+    # STANDARD / CONVERTIBLE: STANDARD purchases will be evaluated first, CONVERTIBLE purchases will assume standard
+    #                         purchases are being purchased too.
+    # UTIL_TARGET: The RI Utilization amount to target when the specified threshold has been met.  Some examples
+    #              100: Require the RI would be fully utilized 100% of the time based on historical data.
+    #              80: Require the RI would be fully utilized at least 80% of the time based on historical data.
+    #              BREAK_EVEN: Require the RI would be utilized at least the break-even precentage based on the
+    #                          savings expected between on-demand and RI Cost
+    #              NONE: Do not recommend RIs
+    AGGRESSIVE_THRESHOLD: 1000
+    CONSERVATIVE_THRESHOLD: -1
+    STANDARD_AGGRESSIVE_UTIL_TARGET: BREAK_EVEN
+    STANDARD_DEFAULT_UTIL_TARGET: 80
+    STANDARD_CONSERVATIVE_UTIL_TARGET: NONE
+    CONVERTIBLE_AGGRESSIVE_UTIL_TARGET:
+    CONVERTIBLE_DEFAULT_UTIL_TARGET:
+    CONVERTIBLE_CONSERVATIVE_UTIL_TARGET: 100
+
+    # SLUSH_ACCOUNT: The slush account has 2 main influences on RI Evaluations.
+    #             1) Existing RIs in the slush account are not counted toward float from the per-account evaluation,
+    #                so that the accounts with persistent demand are expected to purchase their share.
+    #                * NOT YET IMPLEMENTED # FIXME
+    #             2) Addtional RIs are recommended for the slush account based on the total RI demand in excess of the
+    #                sum of the per-account demand.  Since this utilization target may be set higher for the slush
+    #                account, this is to be expected, however even when the slush target equals the per-account target,
+    #                slush RIs will be purchased when total_demand > sum(account_demand)
+    #          NOTE: Due to the nature of the slush account, only convertible RIs should be configured.
+    SLUSH_ACCOUNT: 000000000000
+    STANDARD_AGGRESSIVE_SLUSH_UTIL_TARGET: NONE
+    STANDARD_DEFAULT_SLUSH_UTIL_TARGET: NONE
+    STANDARD_CONSERVATIVE_SLUSH_UTIL_TARGET: NONE
+    CONVERTIBLE_AGGRESSIVE_SLUSH_UTIL_TARGET: BREAK_EVEN
+    CONVERTIBLE_DEFAULT_SLUSH_UTIL_TARGET: 80
+    CONVERTIBLE_CONSERVATIVE_SLUSH_UTIL_TARGET: 100

@@ -1,0 +1,97 @@
+# Copyright 2019, Oath Inc.
+# Licensed under the terms of the Apache License, Version 2.0. See LICENSE file for terms.
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: AWS Reserved Instances Evaluation Lambda
+
+Parameters:
+    ArielConfigurationLocation:
+        Description: S3 Location to retrieve configuration from.  This may be a comma separated list.
+        Type: String
+    ArielSchedule:
+        Description: CloudWatch Events Schedule Expression for frequency of Ariel updates
+        Type: String
+        Default: "cron(0 12 * * ? *)"
+    LambdaMemory:
+        Description: Amount of memory to allocate to Ariel lambda
+        Type: Number
+        Default: 512
+        AllowedValues: [ 512, 1024, 2048, 3008]
+    S3WriteARNs:
+        Description: Comma separated list of S3 ARNs to grant write access to.
+        Type: String
+    VpcId:
+        Description: VPC to run lambda in
+        Type: AWS::EC2::VPC::Id
+    VpcSubnets:
+        Description: Subnets to run lambda in
+        Type: List<AWS::EC2::Subnet::Id>
+
+Metadata:
+    AWS::CloudFormation::Interface:
+        ParameterGroups:
+          - Label: { default: 'Ariel Parameters' }
+            Parameters: [ "ArielConfigurationLocation", "ArielSchedule", "LambdaMemory", "S3WriteARNs" ]
+          - Label: { default: 'VPC Parameters' }
+            Parameters: [ "VpcId", "VpcSubnets" ]
+
+Resources:
+    ArielRole:
+        Type: AWS::IAM::Role
+        Properties:
+            AssumeRolePolicyDocument:
+                Statement:
+                  - Effect: Allow
+                    Action: sts:AssumeRole
+                    Principal:
+                        Service: lambda.amazonaws.com
+            Path: /sam/
+            ManagedPolicyArns:
+              - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+            Policies:
+              - PolicyName: ArielRolePolicy
+                PolicyDocument:
+                    Statement:
+                      - Effect: Allow
+                        Action: 'sts:AssumeRole'
+                        Resource: 'arn:aws:iam::*:role/ariel-master-usage'
+                      - Effect: Allow
+                        Action: ["kms:Decrypt", "kms:Encrypt", "s3:Get*"]
+                        Resource: "*"
+                      - Effect: Allow
+                        Action: ["s3:Put*"]
+                        Resource: !Split [ ',', !Ref S3WriteARNs ]
+                      # Support for optional Aurora DB
+                      - Effect: 'Allow'
+                        Action: 'rds-db:connect'
+                        Resource: !Sub 'arn:aws:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:*/ariel_rw'
+
+    VpcSecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+            GroupDescription: Ariel Lambda
+            VpcId: !Ref 'VpcId'
+            Tags:
+                - Key: Name
+                  Value: ariel-lambda
+
+    ArielFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            CodeUri: ../ariel/
+            Handler: ariel.lambda.handler
+            FunctionName: !Sub "ariel"
+            Role: !GetAtt ArielRole.Arn
+            Runtime: python3.6
+            MemorySize: !Ref LambdaMemory
+            Timeout: 900
+            VpcConfig:
+                SecurityGroupIds: [ !Ref VpcSecurityGroup ]
+                SubnetIds: !Ref VpcSubnets
+            Events:
+                Periodic:
+                    Type: Schedule
+                    Properties:
+                        Schedule: !Ref ArielSchedule
+                        Input: !Sub '{"config":"${ArielConfigurationLocation}"}'

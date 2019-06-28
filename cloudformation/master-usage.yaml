@@ -1,0 +1,94 @@
+# Copyright 2019, Oath Inc.
+# Licensed under the terms of the Apache License, Version 2.0. See LICENSE file for terms.
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Athena Usage Role for Ariel
+
+Parameters:
+    UsageAccount:
+        Description: "Account ID to allow access from.  Default: current account"
+        Type: String
+        Default: ''
+    ReportsBucket:
+        Description: "S3 Bucket to allow Athena access to for CUR Report.  Default: Any bucket"
+        Type: String
+        Default: ''
+    EnableAthenaAccess:
+        Description: 'Configure Ariel role to allow Athena access needed for CUR processing.'
+        Type: String
+        AllowedValues: [ 'true', 'false' ]
+        Default: true
+    EnableOrganizationsAccess:
+        Description: 'Configure Ariel role to allow Organizations access needed for gathering account names.'
+        Type: String
+        AllowedValues: [ 'true', 'false' ]
+        Default: true
+    EnableReservedInstancesAccess:
+        Description: 'Configure Ariel role to allow Cost Explorer RI access needed to poll RIs.'
+        Type: String
+        AllowedValues: [ 'true', 'false' ]
+        Default: true
+
+Conditions:
+    cross-account-flag:
+        !Not [ !Equals [ !Ref 'UsageAccount', '' ] ]
+    bucket-flag:
+        !Not [ !Equals [ !Ref 'ReportsBucket', '' ] ]
+    athena-flag:
+        !Equals [ !Ref 'EnableAthenaAccess', 'true' ]
+    organizations-flag:
+        !Equals [ !Ref 'EnableOrganizationsAccess', 'true' ]
+    ri-flag:
+        !Equals [ !Ref 'EnableReservedInstancesAccess', 'true' ]
+
+Resources:
+    AthenaUsageRole:
+        Type: AWS::IAM::Role
+        Properties:
+            AssumeRolePolicyDocument:
+                Statement:
+                  - Effect: Allow
+                    Action: sts:AssumeRole
+                    Principal:
+                        AWS: !Join [ '', [ 'arn:aws:iam::', !If [ cross-account-flag, !Ref 'UsageAccount', !Ref 'AWS::AccountId' ], ':root' ] ]
+                        Service: lambda.amazonaws.com
+            Path: /
+            Policies:
+              - !If
+                  - athena-flag
+                  - PolicyName: AthenaUsageRolePolicy
+                    PolicyDocument:
+                        Statement:
+                          - Effect: Allow
+                            Action: [ "athena:*", "glue:BatchGetPartition", "glue:Get*" ]
+                            Resource: "*"
+                          - Effect: Allow
+                            Action: [ "s3:GetBucketLocation", "s3:GetObject", "s3:ListBucket", "s3:ListBucketMultipartUploads",
+                                "s3:ListMultipartUploadParts", "s3:AbortMultipartUpload", "s3:CreateBucket", "s3:PutObject" ]
+                            Resource: !Sub "arn:aws:s3:::aws-athena-query-results-${AWS::AccountId}-*"
+                          - Effect: Allow
+                            Action: [ "kms:Decrypt" ]
+                            Resource: "*"
+                          - Effect: Allow
+                            Action: [ "s3:Get*", "s3:List*" ]
+                            Resource: !If [ bucket-flag, [!Sub "arn:aws:s3:::${ReportsBucket}", !Sub "arn:aws:s3:::${ReportsBucket}/*"], "*" ]
+                  - !Ref 'AWS::NoValue'
+              - !If
+                  - organizations-flag
+                  - PolicyName: OrganizationsUsageRolePolicy
+                    PolicyDocument:
+                        Statement:
+                          - Effect: Allow
+                            Action: ["organizations:ListAccounts"]
+                            Resource: "*"
+                  - !Ref 'AWS::NoValue'
+              - !If
+                  - ri-flag
+                  - PolicyName: ReservedInstancesUsageRolePolicy
+                    PolicyDocument:
+                        Statement:
+                          - Effect: Allow
+                            Action: ["ce:GetReservationUtilization"]
+                            Resource: "*"
+                  - !Ref 'AWS::NoValue'
+            RoleName: ariel-master-usage

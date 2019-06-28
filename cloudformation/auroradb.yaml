@@ -1,0 +1,110 @@
+# Copyright 2019, Oath Inc.
+# Licensed under the terms of the Apache License, Version 2.0. See LICENSE file for terms.
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Serverless Aurora DB for Ariel data storage
+Parameters:
+  VpcId:
+    Description: VPC to run database in
+    Type: AWS::EC2::VPC::Id
+  Subnets:
+    Description: Subnets to run database in
+    Type: List<AWS::EC2::Subnet::Id>
+  DbInstanceType:
+    Description: The instance type to use for the database
+    Type: String
+    Default: db.r4.2xlarge
+    AllowedValues:
+      - db.r4.large
+      - db.r4.xlarge
+      - db.r4.2xlarge
+      - db.r4.4xlarge
+      - db.r4.8xlarge
+  PubliclyAccessible:
+    Description: Attach a public IP to the DB Cluster
+    Type: String
+    Default: false
+    AllowedValues: [ 'true', 'false' ]
+  AllowedIngress:
+    Description: CIDR allowed to connect to Aurora
+    Type: String
+    Default: "10.0.0.0/8"
+
+Metadata:
+    AWS::CloudFormation::Interface:
+        ParameterGroups:
+          - Label: { default: 'Aurora Parameters' }
+            Parameters: [ "VpcId", "Subnets", "DbInstanceType", "PubliclyAccessible", "AllowedIngress" ]
+
+Resources:
+  DboPassword:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: 'aurora_dbo password for Ariel'
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "aurora_dbo"}'
+        GenerateStringKey: 'password'
+        ExcludeCharacters: '"@/\'
+      Name: 'ariel-aurora-dbo'
+  DboPasswordLink:
+    Type: AWS::SecretsManager::SecretTargetAttachment
+    Properties:
+      SecretId: !Ref 'DboPassword'
+      TargetType: 'AWS::RDS::DBCluster'
+      TargetId: !Ref 'DbCluster'
+  DbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Ariel DB
+      SubnetIds: !Ref 'Subnets'
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Ariel DB
+      VpcId: !Ref 'VpcId'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '5432'
+          ToPort: '5432'
+          CidrIp: !Ref "AllowedIngress"
+      Tags:
+        - Key: Name
+          Value: ariel-aurora
+  DbCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      BackupRetentionPeriod: '7'
+      DatabaseName: ariel
+      DBClusterParameterGroupName: 'default.aurora-postgresql10'
+      DBSubnetGroupName: !Ref 'DbSubnetGroup'
+      EnableIAMDatabaseAuthentication: true
+      Engine: aurora-postgresql
+      EngineVersion: 10.6
+      MasterUsername: !Sub "{{resolve:secretsmanager:${DboPassword}:SecretString:username}}"
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:${DboPassword}:SecretString:password}}"
+      Port: 5432
+      PreferredBackupWindow: 05:00-06:00
+      PreferredMaintenanceWindow: mon:06:00-mon:07:00
+      StorageEncrypted: true
+      VpcSecurityGroupIds:
+        - !Ref 'SecurityGroup'
+  DbInstance1:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: aurora-postgresql
+      DBClusterIdentifier: !Ref 'DbCluster'
+      DBInstanceClass: !Ref 'DbInstanceType'
+      PubliclyAccessible: !Ref 'PubliclyAccessible'
+
+Outputs:
+  DbSubnetGroup:
+    Description: DbSubnetGroup
+    Value: !Ref 'DbSubnetGroup'
+  Endpoint:
+    Description: Endpoint
+    Value: !GetAtt 'DbCluster.Endpoint.Address'
+  ReadEndpoint:
+    Description: ReadEndpoint
+    Value: !GetAtt 'DbCluster.ReadEndpoint.Address'
+  SecurityGroup:
+    Description: SecurityGroup
+    Value: !Ref 'SecurityGroup'
