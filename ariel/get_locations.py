@@ -29,6 +29,7 @@ def load(config):
                    utils.get_config_value(config, 'DEFAULTS', 'AWS_REGION',
                                           os.environ.get('AWS_DEFAULT_REGION')))
         database = utils.get_config_value(config, 'ATHENA', 'CUR_DATABASE')
+        table_name = utils.get_config_value(config, 'ATHENA', 'CUR_TABLE_NAME', 'cur')
         staging  = utils.get_config_value(config, 'ATHENA', 'STAGING',
                                           's3://aws-athena-query-results-{0}-{1}/ariel-cur-output/'.format(account, region))
         days     = utils.get_config_value(config, 'ATHENA', 'DAYS', 28)
@@ -60,7 +61,7 @@ def load(config):
         # Retrieve location to region mapping for use with ec2 pricing data
         query = ' '.join((""
             + "SELECT DISTINCT product_location, product_region "
-            + "  FROM " + database + ".cur "
+            + "  FROM " + database + "." + table_name
             + " WHERE line_item_usage_start_date >= cast('{}' as timestamp) ".format(starttime.isoformat(' '))
             + "   AND line_item_usage_start_date < cast('{}' as timestamp) ".format(endtime.isoformat(' '))
             + "   AND product_operation = 'RunInstances' "

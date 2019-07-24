@@ -29,6 +29,7 @@ def load(config):
                    utils.get_config_value(config, 'DEFAULTS', 'AWS_REGION',
                                           os.environ.get('AWS_DEFAULT_REGION')))
         database = utils.get_config_value(config, 'ATHENA', 'CUR_DATABASE')
+        table_name = utils.get_config_value(config, 'ATHENA', 'CUR_TABLE_NAME', 'cur')
         staging  = utils.get_config_value(config, 'ATHENA', 'STAGING',
                                           's3://aws-athena-query-results-{0}-{1}/ariel-cur-output/'.format(account, region))
         days     = utils.get_config_value(config, 'ATHENA', 'DAYS', 28)
@@ -64,7 +65,7 @@ def load(config):
               "       lower(product_instance) AS instancetypefamily, "
               "       sum(line_item_usage_amount) AS unlimitedusageamount, "
               "       sum(line_item_unblended_cost) AS unlimitedusagecost "
-                          + "  FROM " + database + ".cur "
+                          + "  FROM " + database + "." + table_name
             + " WHERE line_item_usage_type like '%CPUCredits:%' "
             + "   AND line_item_usage_start_date >= cast('{}' as timestamp) ".format(starttime.isoformat(' '))
             + "   AND line_item_usage_start_date < cast('{}' as timestamp) ".format(endtime.isoformat(' '))

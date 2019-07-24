@@ -13,6 +13,7 @@
   * Make sure to select `Enable report data integration for Amazon Athena`
   * Set `Time Granularity` to `Hourly`
   * All other values are up to your personal preference
+  * Make note of the value you use for the `Report name`.  You will need this in step 4 for the `ATHENA` -> `CUR_TABLE_NAME` config setting.
 
 ### 2. Create Glue Crawler
 
@@ -32,7 +33,7 @@ Step 1 will create a cloudformation template for you at
 * Navigate to `AWS Glue`
   * Select `Crawlers`
   * Select `AWSCURCrawler-cur`
-  * Note the `Database` name listed on this page, it will be needed later
+  * Note the `Database` name listed on this page.  You will need this in step 4 for the `ATHENA` -> `CUR_DATABASE` config setting.
 
 ### 3. Install Athena Usage Role
 
@@ -56,6 +57,7 @@ Step 1 will create a cloudformation template for you at
 * Edit `config-example.yaml`
   * You must specify `MASTER` -> `ACCOUNT_ID` or `MASTER` -> `ROLE` if you are running Airle in an account other than master
   * You must specify `ATHENA` -> `CUR_DATABASE` - this must be set to the `Database` value from the `AWS Glue` configuration noted in Step 2
+  * You must specify `ATHENA` -> `CUR_TABLE_NAME` - this must be set to the same value as the `Report name` you chose for the Cost and Usage report in Step 1.  
   * If you would like any reports published to S3, you must update the `CSV_REPORTS` section with the S3 path to publish each reports to
   * If you would like any reports published to RDS, you must update the `PG_REPORTS` section with `DB_HOST`, and the table name to publish each report to
   * All other values you can tune as necessary

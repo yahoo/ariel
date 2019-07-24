@@ -14,6 +14,9 @@ MASTER:
 ATHENA:
     AWS_REGION:              # Region to execute Athena Query in.  Default: DEFAULTS:AWS_REGION
     CUR_DATABASE: required   # Name of the CUR database.  This should be determined by your CUR export configuration
+    CUR_TABLE_NAME:          # This is the table name used by Athena for the queries and aligns with the cost and usage report name. 
+                             # You can find the create table statement at s3://${BUCKET_NAME}/${PREFIX_NAME}/${REPORT_NAME}/${MONTH_BEGIN_DATE}-${MONTH_END_DATE}/${REPORT_NAME}-create-table.sql
+                             # Default: cur
     STAGING:                 # Temporary S3 bucket for Athena processing.
                              # Default: s3://aws-athena-query-results-${AWS::AccountId}-${AWS::Region}/ariel-cur-output/'
     DAYS:                    # Number of days to analyze.  Default: 28

@@ -29,6 +29,7 @@ def load(config):
                    utils.get_config_value(config, 'DEFAULTS', 'AWS_REGION',
                                           os.environ.get('AWS_DEFAULT_REGION')))
         database = utils.get_config_value(config, 'ATHENA', 'CUR_DATABASE')
+        table_name = utils.get_config_value(config, 'ATHENA', 'CUR_TABLE_NAME', 'cur')
         staging  = utils.get_config_value(config, 'ATHENA', 'STAGING',
                                           's3://aws-athena-query-results-{0}-{1}/ariel-cur-output/'.format(account, region))
         days     = utils.get_config_value(config, 'ATHENA', 'DAYS', 28)
@@ -74,7 +75,7 @@ def load(config):
             + "              product_operating_system AS operatingsystem, "
             + "              CAST(line_item_usage_amount AS double) as usageamount, "
             + "              CASE WHEN line_item_line_item_type = 'DiscountedUsage' THEN CAST(line_item_usage_amount AS DOUBLE) ELSE 0 END as reservedamount "
-            + "         FROM " + database + ".cur "
+            + "         FROM " + database + "." + table_name
             + "        WHERE product_operation = 'RunInstances' "
             + "          AND line_item_availability_zone != '' "
             + "          AND product_tenancy = 'Shared' "
