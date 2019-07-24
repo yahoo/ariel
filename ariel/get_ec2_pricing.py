@@ -149,8 +149,27 @@ def load(config, locations=LOCATIONS):
         return prices
 
 def check_row(header_map, row):
-
-    if row[header_map['Product Family']] != 'Compute Instance':
+    
+    if row[header_map['Product Family']] != 'Compute Instance' and \
+       row[header_map['Product Family']] != 'Compute Instance (bare metal)':        
+        ###################
+        #
+        # meckstmd: 07/24/2019
+        #
+        # These instance types have a Product Family of "Compute Instance (bare metal)"
+        #     i3.metal
+        #     r5.metal
+        #     r5d.metal
+        #     z1d.metal
+        #
+        # These instance types have a Product Family of "Compute Instance"
+        #     c5.metal
+        #     m5.metal
+        #     m5d.metal
+        #
+        #  I am not sure why some metal instances have bare metal in the Product Family name and others do not
+        #
+        ###################
         return False
     if row[header_map['serviceCode']] != 'AmazonEC2':
         return False
