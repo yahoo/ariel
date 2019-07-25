@@ -150,24 +150,28 @@ def load(config, locations=LOCATIONS):
 
 def check_row(header_map, row):
     
-    if row[header_map['Product Family']] != 'Compute Instance' and \
-       row[header_map['Product Family']] != 'Compute Instance (bare metal)':        
+    if row[header_map['Product Family']] not in ['Compute Instance', 'Compute Instance (bare metal)']:        
         ###################
         #
-        # meckstmd: 07/24/2019
+        # meckstmd: 07/25/2019
         #
-        # These instance types have a Product Family of "Compute Instance (bare metal)"
+        # These metal instance types have a Product Family of "Compute Instance (bare metal)"
         #     i3.metal
         #     r5.metal
         #     r5d.metal
         #     z1d.metal
         #
-        # These instance types have a Product Family of "Compute Instance"
+        # These metal instance types have a Product Family of "Compute Instance"
         #     c5.metal
         #     m5.metal
         #     m5d.metal
         #
-        #  I am not sure why some metal instances have bare metal in the Product Family name and others do not
+        #  From AWS Support Case #6286484301:
+        #   There is no difference in the two families apart from the ones listed in the EC2 instance types 
+        #   details page (https://aws.amazon.com/ec2/instance-types/). There seems to be an overlap of some 
+        #   kind when new instance types were added and that is why you see them differentiated into two families.
+        #   You can ignore this difference in classification for now and once the errors are rectified at our 
+        #   end, you should not see the two families.
         #
         ###################
         return False
