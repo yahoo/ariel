@@ -234,6 +234,7 @@ Pull Requests are welcome.
 
 ## Maintainers
 Sean Bastille: sean.bastille@verizonmedia.com
+Micah Meckstroth: micah.meckstroth@verizonmedia.com
 
 ## License
 This project is licensed under the terms of the
