@@ -330,7 +330,8 @@ def generate(config, instances, ris, pricing):
                 region_hourly_usage -= az_assigned
 
             # Determine our purchase size for this family
-            types = [key for key in pricing[region].keys() if key.startswith(family + '.')]
+            # Most families have a format of "[family].[size]" for the units except metal instance types which just use their name
+            types = [key for key in pricing[region].keys() if key.startswith(family + '.') or key == family]
             type_units = {key: get_units(key) for key in types}
             desired_size = utils.get_config_value(config, 'RI_PURCHASES', 'RI_SIZE', 'largest')
             if desired_size == 'largest':
