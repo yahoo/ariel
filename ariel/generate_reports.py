@@ -45,7 +45,11 @@ def generate(config, instances, ris, pricing):
     instances.insert(region_column, 'region', region_value)
 
     family_column = instances.columns.get_loc('instancetype')
-    family_value = instances['instancetype'].apply(lambda x: x if x.endswith('.metal') else x.split('.')[0])
+
+    # meckstmd:07/29/2019 - Metal RIs are no different than regular RIs - they are a family with a normalization factor
+    #  for example, i3.metal is equivalent to i3.16xlarge.  See https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/apply_ri.html 
+    #family_value = instances['instancetype'].apply(lambda x: x if x.endswith('.metal') else x.split('.')[0])
+    family_value = instances['instancetype'].apply(lambda x: x.split('.')[0])
     instances.insert(family_column, 'instancetypefamily', family_value)
 
     instance_units_column = instances.columns.get_loc('instances') + 2
@@ -58,7 +62,11 @@ def generate(config, instances, ris, pricing):
 
     # Add some additional data to ris
     family_column = ris.columns.get_loc('instancetype') + 1
-    family_value = ris['instancetype'].apply(lambda x: x if x.endswith('.metal') else x.split('.')[0])
+
+    # meckstmd:07/29/2019 - Metal RIs are no different than regular RIs - they are a family with a normalization factor
+    #  for example, i3.metal is equivalent to i3.16xlarge.  See https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/apply_ri.html     
+    #family_value = ris['instancetype'].apply(lambda x: x if x.endswith('.metal') else x.split('.')[0])
+    family_value = ris['instancetype'].apply(lambda x: x.split('.')[0])
     ris.insert(family_column, 'instancetypefamily', family_value)
 
     units_column = ris.columns.get_loc('quantity') + 1
@@ -330,8 +338,7 @@ def generate(config, instances, ris, pricing):
                 region_hourly_usage -= az_assigned
 
             # Determine our purchase size for this family
-            # Most families have a format of "[family].[size]" for the units except metal instance types which just use their name
-            types = [key for key in pricing[region].keys() if key.startswith(family + '.') or key == family]
+            types = [key for key in pricing[region].keys() if key.startswith(family + '.')]
             type_units = {key: get_units(key) for key in types}
             desired_size = utils.get_config_value(config, 'RI_PURCHASES', 'RI_SIZE', 'largest')
             if desired_size == 'largest':
