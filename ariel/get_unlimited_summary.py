@@ -59,6 +59,14 @@ def load(config):
         starttime = endtime - datetime.timedelta(days=days)
 
         # Download Instance and RI usage
+        # meckstmd: 07/30/2019 - Something must have changed with the way AWS is exposing CPU Credits.
+        #  There is a line_item_line_item_type column of Tax for each account which has CPU Credits which 
+        #  does not have a product_region or product_instance.  Because these fields are empty, Ariel 
+        #  fails when trying to insert this report data into the unlimited_usage DB table because it does
+        #  not allow nulls.  The line_item_line_item_type column of Usage in this report has the per-instance
+        #  CPU credits for unlimited and does have product_region and product_instance.  I am guessing the
+        #  Tax one was just added to this report and that is what broke Ariel.
+        #  See https://github.com/yahoo/ariel/issues/5
         query = ' '.join((""
             + "SELECT line_item_usage_account_id AS accountid ,"
               "       product_region AS region, "
@@ -69,6 +77,7 @@ def load(config):
             + " WHERE line_item_usage_type like '%CPUCredits:%' "
             + "   AND line_item_usage_start_date >= cast('{}' as timestamp) ".format(starttime.isoformat(' '))
             + "   AND line_item_usage_start_date < cast('{}' as timestamp) ".format(endtime.isoformat(' '))
+            + "   AND product_region <> '' AND product_instance <> ''"
             + " GROUP BY line_item_usage_account_id, product_region, lower(product_instance) "
             + " ORDER BY line_item_usage_account_id, product_region, lower(product_instance) "
             ).split())
