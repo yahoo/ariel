@@ -49,7 +49,18 @@ def load(config):
                     # Make sure to only capture active RIs
                     endDate = datetime.datetime.strptime(row['Attributes']['endDateTime'], "%Y-%m-%dT%H:%M:%S.000Z")
                     if endDate.date() > datetime.date.today():
-                        operatingSystem = 'Linux' if row['Attributes']['platform'] == 'Linux/UNIX' else row['Attributes']['platform'] # for CUR compatibility
+
+                        # these mappings are needed for CUR compatibility
+                        # the current pricing report uses the following operating systems:
+                        # Linux, RHEL, SUSE, Windows  
+                        platform = row['Attributes']['platform']
+                        if platform == 'Linux/UNIX':
+                             operatingSystem = 'Linux'
+                        elif platform == 'Red Hat Enterprise Linux':
+                             operatingSystem = 'RHEL'
+                        else:
+                            operatingSystem = platform
+
                         ri = {
                             'accountid': int(row['Attributes']['accountId']),
                             'accountname': row['Attributes']['accountName'],
