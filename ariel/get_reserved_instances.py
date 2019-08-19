@@ -90,6 +90,14 @@ def load(config):
                 break
 
         ris = pd.DataFrame.from_records(ris)
+        if (len(ris) == 0):
+            ris = pd.DataFrame(columns=['accountid','accountname','reservationid','subscriptionid','startdate',
+               'enddate','state','quantity','availabilityzone','region','instancetype',
+               'paymentoption','tenancy','operatingsystem','amortizedhours',
+               'amortizedupfrontprice','amortizedrecurringfee','offeringclass','scope'])
+        else:
+            ris = pd.DataFrame.from_records(ris)
+
         ris.to_csv(cache_file, index=False)
 
     LOGGER.info("Loaded {} reserved instances".format(len(ris)))

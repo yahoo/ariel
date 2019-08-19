@@ -498,39 +498,51 @@ def generate(config, instances, ris, pricing):
     ri_hourly_usage_report = ri_hourly_usage_report.groupby(region_instance_groups.keys + ['hourofweek']).sum()
     instances = instances.drop('hourofweek', 1)
 
-    # Build RI Usage report with Actual cost benefit
-    ri_usage_report = ri_hourly_usage_report.groupby(region_instance_groups.keys).mean()
-    ri_cost = ris.groupby(region_instance_groups.keys)['amortizedupfrontprice'].sum() + ris.groupby(region_instance_groups.keys)['amortizedrecurringfee'].sum()
-    od_cost = ri_usage_report.apply(lambda x: 720 * pricing[x.name[0]]["{}.{}".format(x.name[1], reference_sizes[x.name[1]])][x.name[2]][x.name[3]]['onDemandRate'] *
-                                    min(x['total_ri_units'], x['total_instance_units']) / get_units(x.name[1] + '.' + reference_sizes[x.name[1]]),
-                                    axis=1)
-    xl_effective_rate = ((od_cost - ri_cost) * (100 - ri_usage_report['coverage_chance']) / 100 + ri_cost) / 720 / ri_usage_report['total_ri_units'] * 8
-    ri_usage_report.insert(len(ri_usage_report.columns), 'xl_effective_rate', xl_effective_rate)
-    ri_usage_report.insert(len(ri_usage_report.columns), 'monthly_ri_cost', ri_cost)
-    ri_usage_report.insert(len(ri_usage_report.columns), 'monthly_od_cost', od_cost)
-    ri_usage_report.insert(len(ri_usage_report.columns), 'monthly_ri_savings', od_cost - ri_cost)
-
-    # Apply some column formats
-    ri_hourly_usage_report['total_ri_units']          = ri_hourly_usage_report['total_ri_units']         .map('{:.0f}'.format)
-    ri_hourly_usage_report['total_instance_units']    = ri_hourly_usage_report['total_instance_units']   .map('{:.0f}'.format)
-    ri_hourly_usage_report['floating_ri_units']       = ri_hourly_usage_report['floating_ri_units']      .map('{:.0f}'.format)
-    ri_hourly_usage_report['floating_instance_units'] = ri_hourly_usage_report['floating_instance_units'].map('{:.0f}'.format)
-    ri_hourly_usage_report['unused_ri_units']         = ri_hourly_usage_report['unused_ri_units']        .map('{:.0f}'.format)
-    ri_hourly_usage_report['coverage_chance']         = ri_hourly_usage_report['coverage_chance']        .map('{:.2f}'.format)
-    ri_usage_report['total_ri_units']          = ri_usage_report['total_ri_units']         .map('{:.0f}'.format)
-    ri_usage_report['total_instance_units']    = ri_usage_report['total_instance_units']   .map('{:.0f}'.format)
-    ri_usage_report['floating_ri_units']       = ri_usage_report['floating_ri_units']      .map('{:.0f}'.format)
-    ri_usage_report['floating_instance_units'] = ri_usage_report['floating_instance_units'].map('{:.0f}'.format)
-    ri_usage_report['unused_ri_units']         = ri_usage_report['unused_ri_units']        .map('{:.0f}'.format)
-    ri_usage_report['coverage_chance']         = ri_usage_report['coverage_chance']        .map('{:.2f}'.format)
-    ri_usage_report['xl_effective_rate']       = ri_usage_report['xl_effective_rate']      .map('${:,.4f}'.format)
-    ri_usage_report['monthly_ri_cost']         = ri_usage_report['monthly_ri_cost']        .map('${:,.2f}'.format)
-    ri_usage_report['monthly_od_cost']         = ri_usage_report['monthly_od_cost']        .map('${:,.2f}'.format)
-    ri_usage_report['monthly_ri_savings']      = ri_usage_report['monthly_ri_savings']     .map('${:,.2f}'.format)
-    ri_purchases['ri upfront cost'] = ri_purchases['ri upfront cost'].map('${:,.2f}'.format)
-    ri_purchases['ri total cost']   = ri_purchases['ri total cost']  .map('${:,.2f}'.format)
-    ri_purchases['ri savings']      = ri_purchases['ri savings']     .map('${:,.2f}'.format)
-    ri_purchases['ondemand value']  = ri_purchases['ondemand value'] .map('${:,.2f}'.format)
+    # https://github.com/yahoo/ariel/issues/8: this is necessary if the accounts have not purchased any RIs
+    if (len(ri_hourly_usage_report) == 0):
+        ri_hourly_usage_report = pd.DataFrame(columns=['region', 'instancetypefamily', 'tenancy', 'operatingsystem',
+                                              'hourofweek', 'total_ri_units', 'total_instance_units',
+                                              'floating_ri_units', 'floating_instance_units', 'unused_ri_units',
+                                              'coverage_chance'])
+        ri_usage_report = pd.DataFrame(columns=['region', 'instancetypefamily', 'tenancy', 'operatingsystem',
+                                                'total_ri_units', 'total_instance_units', 'floating_ri_units',
+                                                'floating_instance_units', 'unused_ri_units', 'coverage_chance',
+                                                'xl_effective_rate', 'monthly_ri_cost', 'monthly_od_cost',
+                                                'monthly_ri_savings'])
+    else:
+        # Build RI Usage report with Actual cost benefit
+        ri_usage_report = ri_hourly_usage_report.groupby(region_instance_groups.keys).mean()
+        ri_cost = ris.groupby(region_instance_groups.keys)['amortizedupfrontprice'].sum() + ris.groupby(region_instance_groups.keys)['amortizedrecurringfee'].sum()
+        od_cost = ri_usage_report.apply(lambda x: 720 * pricing[x.name[0]]["{}.{}".format(x.name[1], reference_sizes[x.name[1]])][x.name[2]][x.name[3]]['onDemandRate'] *
+                                        min(x['total_ri_units'], x['total_instance_units']) / get_units(x.name[1] + '.' + reference_sizes[x.name[1]]),
+                                        axis=1)
+        xl_effective_rate = ((od_cost - ri_cost) * (100 - ri_usage_report['coverage_chance']) / 100 + ri_cost) / 720 / ri_usage_report['total_ri_units'] * 8
+        ri_usage_report.insert(len(ri_usage_report.columns), 'xl_effective_rate', xl_effective_rate)
+        ri_usage_report.insert(len(ri_usage_report.columns), 'monthly_ri_cost', ri_cost)
+        ri_usage_report.insert(len(ri_usage_report.columns), 'monthly_od_cost', od_cost)
+        ri_usage_report.insert(len(ri_usage_report.columns), 'monthly_ri_savings', od_cost - ri_cost)
+    
+        # Apply some column formats
+        ri_hourly_usage_report['total_ri_units']          = ri_hourly_usage_report['total_ri_units']         .map('{:.0f}'.format)
+        ri_hourly_usage_report['total_instance_units']    = ri_hourly_usage_report['total_instance_units']   .map('{:.0f}'.format)
+        ri_hourly_usage_report['floating_ri_units']       = ri_hourly_usage_report['floating_ri_units']      .map('{:.0f}'.format)
+        ri_hourly_usage_report['floating_instance_units'] = ri_hourly_usage_report['floating_instance_units'].map('{:.0f}'.format)
+        ri_hourly_usage_report['unused_ri_units']         = ri_hourly_usage_report['unused_ri_units']        .map('{:.0f}'.format)
+        ri_hourly_usage_report['coverage_chance']         = ri_hourly_usage_report['coverage_chance']        .map('{:.2f}'.format)
+        ri_usage_report['total_ri_units']          = ri_usage_report['total_ri_units']         .map('{:.0f}'.format)
+        ri_usage_report['total_instance_units']    = ri_usage_report['total_instance_units']   .map('{:.0f}'.format)
+        ri_usage_report['floating_ri_units']       = ri_usage_report['floating_ri_units']      .map('{:.0f}'.format)
+        ri_usage_report['floating_instance_units'] = ri_usage_report['floating_instance_units'].map('{:.0f}'.format)
+        ri_usage_report['unused_ri_units']         = ri_usage_report['unused_ri_units']        .map('{:.0f}'.format)
+        ri_usage_report['coverage_chance']         = ri_usage_report['coverage_chance']        .map('{:.2f}'.format)
+        ri_usage_report['xl_effective_rate']       = ri_usage_report['xl_effective_rate']      .map('${:,.4f}'.format)
+        ri_usage_report['monthly_ri_cost']         = ri_usage_report['monthly_ri_cost']        .map('${:,.2f}'.format)
+        ri_usage_report['monthly_od_cost']         = ri_usage_report['monthly_od_cost']        .map('${:,.2f}'.format)
+        ri_usage_report['monthly_ri_savings']      = ri_usage_report['monthly_ri_savings']     .map('${:,.2f}'.format)
+        ri_purchases['ri upfront cost'] = ri_purchases['ri upfront cost'].map('${:,.2f}'.format)
+        ri_purchases['ri total cost']   = ri_purchases['ri total cost']  .map('${:,.2f}'.format)
+        ri_purchases['ri savings']      = ri_purchases['ri savings']     .map('${:,.2f}'.format)
+        ri_purchases['ondemand value']  = ri_purchases['ondemand value'] .map('${:,.2f}'.format)
 
     reports = {
         "ACCOUNT_INSTANCE_SUMMARY": instances,
