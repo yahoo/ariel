@@ -60,7 +60,7 @@ def lambda_main(config):
         conn = pg8000.connect(host=connect_host, port=5432, ssl=ssl, database='ariel', user='ariel_rw', password=token)
 
     for key, report in reports.items():
-        store_index = type(report.index) != pd.RangeIndex
+        store_index = type(report.index) != pd.RangeIndex and len(report) > 0
         filename = utils.get_config_value(config, 'CSV_REPORTS', key, '')
         if filename != '':
             LOGGER.info("Writing Report {} to {}...".format(key, filename))
