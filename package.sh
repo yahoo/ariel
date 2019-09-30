@@ -17,7 +17,7 @@ echo Building ariel-$VERSION.zip
 mkdir build
 test -f ariel-$VERSION.zip && rm ariel-$VERSION.zip
 
-docker run -v $(pwd):/working --rm ubuntu /bin/bash -c "apt-get -y update && apt-get -y install python3-pip && pip3 install -r /working/requirements.txt -t /working/build --prefix ''"
+docker run -v $(pwd):/working --rm "lambci/lambda:build-python3.6" /bin/bash -c "pip install -r /working/$SOURCE/requirements.txt -t /working/build --prefix ''"
 cp -R ariel build
 (cd build; zip -r ../ariel-$VERSION.zip .)
 rm -rf build || sudo rm -rf build || true
