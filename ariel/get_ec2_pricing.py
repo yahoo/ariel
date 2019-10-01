@@ -99,7 +99,11 @@ def load(config, locations=LOCATIONS):
                     "sku": sku,
                     "reserved": {}
                 }
-                units[instanceType] = float(row[header_map['Normalization Size Factor']])
+                try:
+                    units[instanceType] = float(row[header_map['Normalization Size Factor']])
+                except ValueError as e:
+                    print('WARNING: Invalid pricing data: {}:{} -> {}'.format(region, instanceType, sku))
+                    continue
 
             price = prices[region][instanceType][tenancy][operatingsystem]
             if price['sku'] != sku:
