@@ -16,6 +16,7 @@ except:
     from urllib2 import urlopen  # Python 2
 
 LOCATIONS = {
+    "Asia Pacific (Hong Kong)": "ap-east-1",
     "Asia Pacific (Mumbai)": "ap-south-1",
     "Asia Pacific (Osaka-Local)": "ap-northeast-3",
     "Asia Pacific (Seoul)": "ap-northeast-2",
@@ -32,6 +33,7 @@ LOCATIONS = {
     "EU (London)": "eu-west-2",
     "EU (Paris)": "eu-west-3",
     "EU (Stockholm)": "eu-north-1",
+    "Middle East (Bahrain)": "me-south-1",
     "South America (Sao Paulo)": "sa-east-1",
     "US East (N. Virginia)": "us-east-1",
     "US East (Ohio)": "us-east-2",
@@ -102,7 +104,7 @@ def load(config, locations=LOCATIONS):
                 try:
                     units[instanceType] = float(row[header_map['Normalization Size Factor']])
                 except ValueError as e:
-                    print('WARNING: Invalid pricing data: {}:{} -> {}'.format(region, instanceType, sku))
+                    LOGGER.warning('Invalid pricing data: {}:{} -> {}'.format(region, instanceType, sku))
                     continue
 
             price = prices[region][instanceType][tenancy][operatingsystem]

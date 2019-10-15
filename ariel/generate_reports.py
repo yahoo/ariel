@@ -93,8 +93,8 @@ def generate(config, instances, ris, pricing):
     unused_az_ris = pd.DataFrame(columns=az_instance_groups.keys + ['min_unused_qty', 'avg_unused_qty', 'max_unused_qty'])
     ri_hourly_usage_report = pd.DataFrame(columns=region_instance_groups.keys + ['hourofweek'] +
             ['total_ri_units', 'total_instance_units', 'floating_ri_units', 'floating_instance_units', 'unused_ri_units', 'coverage_chance'])
-    ri_purchases = pd.DataFrame(columns=['Account ID', 'Scope', 'Region', 'External AZ', 'Offering Class', 'Quantity',
-            'Term', 'Instance Type', 'Product Description', 'RI Type', 'Tenancy', 'accountid', 'family', 'units',
+    ri_purchases = pd.DataFrame(columns=['Account ID', 'Scope', 'Region / AZ', 'Instance Type', 'Operating System',
+            'Tenancy', 'Offering Class', 'Payment Type', 'Term', 'Quantity', 'accountid', 'family', 'units',
             'ri upfront cost', 'ri total cost', 'ri savings', 'ondemand value', 'algorithm'])
 
     # NOTE: For usage values, AZ usage is booked by quantity (instances), Region usage is booked by units.
@@ -105,6 +105,10 @@ def generate(config, instances, ris, pricing):
     # for group in [('ap-northeast-1', 'c4', 'Shared', 'Linux')]:
         region, family, tenancy, operatingsystem = group
         LOGGER.debug("Evaluting {:>14}:{:3} ({}, {})".format(region, family, tenancy, operatingsystem))
+
+        if region not in pricing:
+            LOGGER.warning("Skipping region {} due to missing pricing information".format(region))
+            continue
 
         # Account for In-Account AZ RI usage
         # In-Account RI usage only needs to be counted against Regional Usage for accuracy
@@ -365,7 +369,6 @@ def generate(config, instances, ris, pricing):
 
             for offering in ['standard', 'convertible']:
                 # Get RI Pricing Data
-                offering2 = 'classic' if offering == 'standard' else 'convertible'
                 rates = pricing[region][purchase_size][tenancy][operatingsystem]
                 od_rate = rates['onDemandRate']
                 ri_rate = None
@@ -404,9 +407,9 @@ def generate(config, instances, ris, pricing):
 
                     # Subtract previously recommended RIs from usage
                     prior_ri_units = ri_purchases[
-                        (ri_purchases['Region'] == region) &
+                        (ri_purchases['Region / AZ'] == region) &
                         (ri_purchases['family'] == family) &
-                        (ri_purchases['Product Description'] == operatingsystem) &
+                        (ri_purchases['Operating System'] == operatingsystem) &
                         (ri_purchases['Tenancy'] == tenancy)]['units'].sum()
                     demand_hourly_usage -= prior_ri_units
 
@@ -466,18 +469,17 @@ def generate(config, instances, ris, pricing):
                         # Build report rows
                         quantity = (account_demand['units'] / purchase_size_units).astype(int)
                         purchases = pd.DataFrame({
-                            'Account ID': account_demand['accountid'].apply(lambda x: '="{0:012}"'.format(x)),
+                            'Account ID': account_demand['accountid'].apply(lambda x: '{0:012}'.format(x)),
                             'Scope': 'Region',
-                            'Region': region,
-                            'External AZ': '',
-                            'Offering Class': offering2,
-                            'Quantity': quantity,
-                            'Term': term,
+                            'Region / AZ': region,
                             'Instance Type': purchase_size,
-                            'Product Description': operatingsystem,
-                            'RI Type': option,
+                            'Operating System': 'Linux/UNIX (Amazon VPC)' if operatingsystem == 'Linux' else operatingsystem,
                             'Tenancy': tenancy,
-                            'accountid': account_demand['accountid'].apply(lambda x: '{0:012}'.format(x)),
+                            'Offering Class': offering,
+                            'Payment Type': option,
+                            'Term': term,
+                            'Quantity': quantity,
+                            'accountid': account_demand['accountid'].apply(lambda x: '="{0:012}"'.format(x)),
                             'family': family,
                             'units': account_demand['units'].astype(int),
                             'ri upfront cost': quantity * ri_rate['upfront'],
