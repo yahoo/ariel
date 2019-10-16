@@ -212,7 +212,23 @@ Concierge, it will take some time for your order to be processed.  Ariel
 will automatically pick up new Reserved Instances once they have been
 purchased through the report accessed from Cost Explorer.
 
-#### Additional Considerations
+### Opening a support case
+
+If your Support Plan allows for it, you can bulk purchase Reserved Instances
+though a support case.
+
+* Case Type: `Account and billing support`
+* Type: `Billing`
+* Category: `Reserved Instances`
+* Severity: `General question`
+
+You will want to download the [AWS RI Transaction Request Worksheet](https://s3.amazonaws.com/awsreservedinstancetransactionrequestworksheet/AWS+RI+Transaction+Request+Worksheet.xlsb), fill it out, and attach it to the case.
+
+For the account list, you may want to `cat ri-purchases.csv | cut -f1 -d, | grep -v Account | sort -u > accounts.txt`
+
+For the purchase sheet, you can load ri-purchases.csv into Excel, then copy the columns A-J, excluding the header, then `Paste Values` into the worksheet.  You will need to manually populate the `Desired Start Date` field.
+
+### Additional Considerations
 
 Ariel does not yet make any recommendations related to modifying
 existing convertible Reserved Instances.  Before making a purchase
