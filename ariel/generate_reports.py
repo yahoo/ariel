@@ -53,7 +53,7 @@ def generate(config, instances, ris, pricing):
     instances.insert(family_column, 'instancetypefamily', family_value)
 
     # Amazon still hasn't fixed g4dn, so we need to filter out instance types that we don't have size data about.
-    instances = instances[instances.instancetype.isin(pricing['units'].keys())]
+    instances = instances[instances.instancetype.isin(pricing['units'].keys())].reset_index(drop=True)
 
     instance_units_column = instances.columns.get_loc('instances') + 2
     units_value = instances['instancetype'].apply(get_units) * instances['instances']
