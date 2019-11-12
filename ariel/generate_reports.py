@@ -52,6 +52,9 @@ def generate(config, instances, ris, pricing):
     family_value = instances['instancetype'].apply(lambda x: x.split('.')[0])
     instances.insert(family_column, 'instancetypefamily', family_value)
 
+    # Amazon still hasn't fixed g4dn, so we need to filter out instance types that we don't have size data about.
+    instances = instances[instances.instancetype.isin(pricing['units'].keys())]
+
     instance_units_column = instances.columns.get_loc('instances') + 2
     units_value = instances['instancetype'].apply(get_units) * instances['instances']
     instances.insert(instance_units_column, 'instance_units', units_value)
@@ -548,6 +551,7 @@ def generate(config, instances, ris, pricing):
 
     reports = {
         "ACCOUNT_INSTANCE_SUMMARY": instances,
+        "RI_SUMMARY": ris,
         "RI_PURCHASES": ri_purchases,
         "RI_USAGE": ri_usage_report,
         "RI_HOURLY_USAGE": ri_hourly_usage_report,
@@ -565,7 +569,8 @@ def cli():
     args = parser.parse_args(args=sys.argv[2:])
     config = utils.load_config(args.config)
 
-    from ariel import get_account_instance_summary, get_ec2_pricing, get_reserved_instances
+    from ariel import get_account_names, get_account_instance_summary, get_ec2_pricing, get_reserved_instances
+    account_names = get_account_names.load(config)
     instances = get_account_instance_summary.load(config)
     ris = get_reserved_instances.load(config)
     pricing = get_ec2_pricing.load(config)
@@ -574,6 +579,14 @@ def cli():
 
     for key, report in reports.items():
         LOGGER.info("Writing {} report to ./output_{}.csv".format(key, key.lower()))
+
+        # Decorate report
+        if 'accountid' in report.columns and 'accountname' not in report.columns:
+            accountname_column = report.columns.get_loc('accountid') + 1
+            input_column = 'Account ID' if 'Account ID' in report.columns else 'accountid'
+            accountname_value = report[input_column].apply(lambda x: account_names[x] if x in account_names else x)
+            report.insert(accountname_column, 'accountname', accountname_value)
+
         store_index = type(report.index) != pd.RangeIndex
         report.to_csv("output_{}.csv".format(key.lower()), index=store_index)
         LOGGER.debug("Report {}:\n".format(key) + str(report))
