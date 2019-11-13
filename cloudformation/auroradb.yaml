@@ -115,6 +115,12 @@ Resources:
       Tags:
         - Key: Name
           Value: ariel-aurora
+  KeyAlias:
+    Type: AWS::KMS::Alias
+    Condition: UseCmk
+    Properties:
+      AliasName: "alias/ariel-aurora"
+      TargetKeyId: !Ref KMSKey
   DbCluster:
     Type: AWS::RDS::DBCluster
     Properties:
