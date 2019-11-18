@@ -80,6 +80,9 @@ Step 1 will create a cloudformation template for you at
   `{ "config": "<S3 URL for your config object>"}`
 * Click on `Test`
 
+NOTE: Please review to [UPGRADE.md](UPGRADE.md) for upgrade considerations.
+
+
 # Optional Aurora DB Install Documentation
 
 The simplest data export method from Ariel is to publish CSV reports to S3, however that is not always the easiest to consume.  Ariel includes optional support for publishing reports to a Postgres compatible database, and we include CloudFormation support for a Postgres compatible Aurora DB Instance.
@@ -98,3 +101,5 @@ This Aurora DB template must be installed in an existing VPC.  You will need to 
 ### 2. Install Schema
 * In a `Terminal` running in your local ariel repository
   * Run `./schema/install_schema.sh <auroradb-hostname>`
+
+NOTE: Please review to [UPGRADE.md](UPGRADE.md) for upgrade considerations.

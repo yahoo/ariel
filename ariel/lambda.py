@@ -66,12 +66,11 @@ def lambda_main(config):
             LOGGER.info("Writing Report {} to {}...".format(key, filename))
 
             # Decorate report
-            try:
+            if 'accountid' in report.columns and 'accountname' not in report.columns:
                 accountname_column = report.columns.get_loc('accountid') + 1
-                accountname_value = report['accountid'].apply(lambda x: account_names[x] if x in account_names else x)
+                input_column = 'Account ID' if 'Account ID' in report.columns else 'accountid'
+                accountname_value = report[input_column].apply(lambda x: account_names[x] if x in account_names else x)
                 report.insert(accountname_column, 'accountname', accountname_value)
-            except KeyError:
-                pass
 
             # Write report
             with utils.get_temp_write_handle(filename) as output:

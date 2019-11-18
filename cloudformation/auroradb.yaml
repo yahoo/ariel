@@ -12,13 +12,18 @@ Parameters:
   DbInstanceType:
     Description: The instance type to use for the database
     Type: String
-    Default: db.r4.2xlarge
+    Default: db.r5.xlarge
     AllowedValues:
       - db.r4.large
       - db.r4.xlarge
       - db.r4.2xlarge
       - db.r4.4xlarge
       - db.r4.8xlarge
+      - db.r5.large
+      - db.r5.xlarge
+      - db.r5.2xlarge
+      - db.r5.4xlarge
+      - db.r5.12xlarge
   PubliclyAccessible:
     Description: Attach a public IP to the DB Cluster
     Type: String
@@ -28,12 +33,34 @@ Parameters:
     Description: CIDR allowed to connect to Aurora
     Type: String
     Default: "10.0.0.0/8"
+  DbEngineVersion:
+    Description: "The version of Aurora PostgreSQL to run.  NOTE: Changing this value will rebuild your database.  Use a manual snapshot to preserve your data."
+    Type: String
+    AllowedValues:
+      - 10.6
+      - 10.7
+    Default: "10.6"
+  UseCmk:
+    Description: "Create and attach a KMS CMK for DB Encryption.  NOTE: Changing this value will rebuild your database.  Use a manual snapshot to preserve your data."
+    Type: String
+    Default: false
+    AllowedValues: [ 'true', 'false' ]
+  DbSnapshotIdentifier:
+    Description: "The snapshot to restore.  NOTE: Keep previous value to avoid a database rebuild."
+    Type: String
+    Default: ""
 
 Metadata:
     AWS::CloudFormation::Interface:
         ParameterGroups:
           - Label: { default: 'Aurora Parameters' }
             Parameters: [ "VpcId", "Subnets", "DbInstanceType", "PubliclyAccessible", "AllowedIngress" ]
+          - Label: { default: 'Dangerous Parameters' }
+            Parameters: [ "DbEngineVersion", "UseCmk", "DbSnapshotIdentifier" ]
+
+Conditions:
+  UseDbSnapshot: !Not [ !Equals [ !Ref "DbSnapshotIdentifier", "" ] ]
+  UseCmk: !Equals [ !Ref "UseCmk", "true" ]
 
 Resources:
   DboPassword:
@@ -69,6 +96,31 @@ Resources:
       Tags:
         - Key: Name
           Value: ariel-aurora
+  KMSKey:
+    Type: AWS::KMS::Key
+    Condition: UseCmk
+    Properties:
+      Description: "KMS Encryption Key for Ariel database"
+      Enabled: true
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: "Enable IAM User Permissions"
+            Effect: "Allow"
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+      Tags:
+        - Key: Name
+          Value: ariel-aurora
+  KeyAlias:
+    Type: AWS::KMS::Alias
+    Condition: UseCmk
+    Properties:
+      AliasName: "alias/ariel-aurora"
+      TargetKeyId: !Ref KMSKey
   DbCluster:
     Type: AWS::RDS::DBCluster
     Properties:
@@ -78,12 +130,14 @@ Resources:
       DBSubnetGroupName: !Ref 'DbSubnetGroup'
       EnableIAMDatabaseAuthentication: true
       Engine: aurora-postgresql
-      EngineVersion: 10.6
-      MasterUsername: !Sub "{{resolve:secretsmanager:${DboPassword}:SecretString:username}}"
+      EngineVersion: !Ref 'DbEngineVersion'
+      KmsKeyId: !If [ "UseCmk", !Ref "KMSKey", !Ref "AWS::NoValue" ]
+      MasterUsername: !If [ "UseDbSnapshot", !Ref "AWS::NoValue", !Sub "{{resolve:secretsmanager:${DboPassword}:SecretString:username}}" ]
       MasterUserPassword: !Sub "{{resolve:secretsmanager:${DboPassword}:SecretString:password}}"
       Port: 5432
       PreferredBackupWindow: 05:00-06:00
       PreferredMaintenanceWindow: mon:06:00-mon:07:00
+      SnapshotIdentifier: !If [ "UseDbSnapshot", !Ref "DbSnapshotIdentifier", !Ref "AWS::NoValue" ]
       StorageEncrypted: true
       VpcSecurityGroupIds:
         - !Ref 'SecurityGroup'

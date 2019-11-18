@@ -7,7 +7,7 @@ CREATE TABLE unlimited_usage
     accountid            character(12)               NOT NULL,
     accountname          character varying(64)       NOT NULL,
     region               character varying(20)       NOT NULL, -- ap-northeast-3 + 6
-    instancetypefamily   character varying(2)        NOT NULL, -- [t2, t3]
+    instancetypefamily   character varying(3)        NOT NULL, -- [t2, t3, t3a]
     unlimitedusageamount double precision            NOT NULL,
     unlimitedusagecost   money                       NOT NULL,
 	PRIMARY KEY (accountid, region, instancetypefamily)
