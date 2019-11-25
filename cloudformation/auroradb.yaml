@@ -67,6 +67,7 @@ Resources:
     Type: AWS::SecretsManager::Secret
     Properties:
       Description: 'aurora_dbo password for Ariel'
+      KmsKeyId: !If [ "UseCmk", !Ref "KMSKey", !Ref "AWS::NoValue" ]
       GenerateSecretString:
         SecretStringTemplate: '{"username": "aurora_dbo"}'
         GenerateStringKey: 'password'
