@@ -57,12 +57,7 @@ def lambda_main(config):
         ssl = { 'ca_certs': ca_cache }
         connect_host = utils.get_config_value(config, 'PG_REPORTS', 'CONNECT_HOST', pgdb)
         token = boto3.client('rds').generate_db_auth_token(pgdb, 5432, 'ariel_rw')
-        try:
-            conn = pg8000.connect(host=connect_host, port=5432, ssl=ssl, database='ariel', user='ariel_rw', password=token)
-        except pg8000.core.InterfaceError:
-            LOGGER.info("Failing back to 2015 CA Bundle...")
-            boto3.resource('s3').Bucket('rds-downloads').download_file('rds-ca-2015-root.pem', ca_cache)
-            conn = pg8000.connect(host=connect_host, port=5432, ssl=ssl, database='ariel', user='ariel_rw', password=token)
+        conn = pg8000.connect(host=connect_host, port=5432, ssl=ssl, database='ariel', user='ariel_rw', password=token)
 
     for key, report in reports.items():
         store_index = type(report.index) != pd.RangeIndex and len(report) > 0
