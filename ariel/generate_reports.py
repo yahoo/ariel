@@ -500,7 +500,7 @@ def generate(config, instances, ris, pricing):
 
     # GroupBy to assign appropriate index columns
     unused_az_ris = unused_az_ris.groupby(az_instance_groups.keys).sum()
-    ri_hourly_usage_report = ri_hourly_usage_report.groupby(region_instance_groups.keys + ['hourofweek']).sum()
+    ri_hourly_usage_report = ri_hourly_usage_report.groupby(region_instance_groups.keys + ['hourofweek']).sum(numeric_only=None)
     instances = instances.drop('hourofweek', 1)
 
     # https://github.com/yahoo/ariel/issues/8: this is necessary if the accounts have not purchased any RIs
@@ -526,7 +526,7 @@ def generate(config, instances, ris, pricing):
         ri_usage_report.insert(len(ri_usage_report.columns), 'monthly_ri_cost', ri_cost)
         ri_usage_report.insert(len(ri_usage_report.columns), 'monthly_od_cost', od_cost)
         ri_usage_report.insert(len(ri_usage_report.columns), 'monthly_ri_savings', od_cost - ri_cost)
-    
+
         # Apply some column formats
         ri_hourly_usage_report['total_ri_units']          = ri_hourly_usage_report['total_ri_units']         .map('{:.0f}'.format)
         ri_hourly_usage_report['total_instance_units']    = ri_hourly_usage_report['total_instance_units']   .map('{:.0f}'.format)
