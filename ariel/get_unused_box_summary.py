@@ -67,6 +67,8 @@ def load(config):
               "       sum(line_item_unblended_cost) AS unusedusagecost "
                           + "  FROM " + database + "." + table_name
             + " WHERE line_item_usage_type like '%UnusedBox:%' "
+            + "   AND product_region IS NOT NULL AND product_region != '' "
+            + "   AND product_instance_type IS NOT NULL AND product_instance_type != '' "
             + "   AND line_item_usage_start_date >= cast('{}' as timestamp) ".format(starttime.isoformat(' '))
             + "   AND line_item_usage_start_date < cast('{}' as timestamp) ".format(endtime.isoformat(' '))
             + " GROUP BY line_item_usage_account_id, product_region, product_instance_type "
