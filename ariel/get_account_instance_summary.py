@@ -78,6 +78,7 @@ def load(config):
             + "         FROM " + database + "." + table_name
             + "        WHERE product_operation = 'RunInstances' "
             + "          AND line_item_availability_zone != '' "
+            + "          AND line_item_availability_zone NOT LIKE '%-wlz-%' " # Filter out Wavelength Instances.  They're not available for RIs.
             + "          AND product_tenancy = 'Shared' "
             + " ) "
             + "SELECT usagestartdate, usageaccountid, availabilityzone, instancetype, tenancy, operatingsystem, SUM(usageamount) as instances, SUM(reservedamount) as reserved "
