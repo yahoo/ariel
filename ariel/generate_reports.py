@@ -294,7 +294,7 @@ def generate(config, instances, ris, pricing):
             unused_ri_units = np.maximum(ri_units - total_usage, 0)
 
             # % Change a new instance will be covered
-            coverage_chance = np.minimum(floating_ri_units / floating_instance_units * 100, 100)
+            coverage_chance = floating_ri_units / np.maximum(np.maximum(floating_instance_units, floating_ri_units), 1) * 100
 
             # Build report rows
             usage_keys = pd.DataFrame([group], columns=region_instance_groups.keys)
