@@ -52,8 +52,19 @@ def generate(config, instances, ris, pricing):
     family_value = instances['instancetype'].apply(lambda x: x.split('.')[0])
     instances.insert(family_column, 'instancetypefamily', family_value)
 
-    # Amazon still hasn't fixed g4dn, so we need to filter out instance types that we don't have size data about.
+    # Amazon still hasn't fixed g4dn, so we need to filter out instance types and RIs that we don't have size data about.
     instances = instances[instances.instancetype.isin(pricing['units'].keys())].reset_index(drop=True)
+    ris = ris[ris.instancetype.isin(pricing['units'].keys())].reset_index(drop=True)
+
+    # Filter out instances and RIs we're not interested in
+    skip_accounts = utils.get_config_value(config, 'RI_PURCHASES', 'SKIP_ACCOUNTS', '').split(' ')
+    instances = instances[~instances.usageaccountid.isin(skip_accounts)].reset_index(drop=True)
+    ris = ris[~ris.accountid.isin(skip_accounts)].reset_index(drop=True)
+
+    include_accounts = utils.get_config_value(config, 'RI_PURCHASES', 'INCLUDE_ACCOUNTS', '').split(' ')
+    if (include_accounts[0] != ''):
+        instances = instances[instances.usageaccountid.isin(include_accounts)].reset_index(drop=True)
+        ris = ris[ris.accountid.isin(include_accounts)].reset_index(drop=True)
 
     instance_units_column = instances.columns.get_loc('instances') + 2
     units_value = instances['instancetype'].apply(get_units) * instances['instances']
