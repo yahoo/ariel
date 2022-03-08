@@ -53,6 +53,10 @@ PG_REPORTS:                   # Specify tablename to persist to database
     UNUSED_BOX:               # unused_box
 
 RI_PURCHASES:
+    INCLUDE_ACCOUTNS:        # Set to a space separated list to include a subset of accounts.  Default: include all accounts
+    SKIP_ACCOUNTS:           # Set to a space separated list to exclude a subset of accounts.  Default: include all accounts
+    EXPIRATION_DAYS:         # Set to treat RIs that expire with the specified number of days as already expired
+
     FILTER_THRESHOLD: 3      # Threshold for reducing noise on instances slope fit (THRESHOLD below)
     RI_TERM: 36              # Term for RIs to be purchased.  12 or 36.  Default: 36
     RI_OPTION: No Upfront    # Purchasing Option.  If selected option is not available, all options will be attempted
