@@ -6,7 +6,7 @@ Description: Athena Usage Role for Ariel
 
 Parameters:
     UsageAccount:
-        Description: "Account ID to allow access from.  Default: current account"
+        Description: "Comma separated list of Account ID to allow access from.  Default: current account"
         Type: String
         Default: ''
     ReportsBucket:
@@ -17,17 +17,17 @@ Parameters:
         Description: 'Configure Ariel role to allow Athena access needed for CUR processing.'
         Type: String
         AllowedValues: [ 'true', 'false' ]
-        Default: true
+        Default: 'true'
     EnableOrganizationsAccess:
         Description: 'Configure Ariel role to allow Organizations access needed for gathering account names.'
         Type: String
         AllowedValues: [ 'true', 'false' ]
-        Default: true
+        Default: 'true'
     EnableReservedInstancesAccess:
         Description: 'Configure Ariel role to allow Cost Explorer RI access needed to poll RIs.'
         Type: String
         AllowedValues: [ 'true', 'false' ]
-        Default: true
+        Default: 'true'
 
 Conditions:
     cross-account-flag:
@@ -50,7 +50,17 @@ Resources:
                   - Effect: Allow
                     Action: sts:AssumeRole
                     Principal:
-                        AWS: !Join [ '', [ 'arn:aws:iam::', !If [ cross-account-flag, !Ref 'UsageAccount', !Ref 'AWS::AccountId' ], ':root' ] ]
+                        AWS: !Split
+                          - ','
+                          - !Join
+                              - ''
+                              -   - 'arn:aws:iam::'
+                                  - !Join
+                                      - ':root,arn:aws:iam::'
+                                      - !Split
+                                          - ','
+                                          - !If [ cross-account-flag, !Ref 'UsageAccount', !Ref 'AWS::AccountId' ]
+                                  - ':root'
                         Service: lambda.amazonaws.com
             Path: /
             Policies:

@@ -33,6 +33,9 @@ def load(config):
         monthend = datetime.date.today()
         monthstart = (datetime.date.today() - datetime.timedelta(days=31))
 
+        skip_accounts = utils.get_config_value(config, 'RI_PURCHASES', 'SKIP_ACCOUNTS', '').split(' ')
+        expiration_days = int(utils.get_config_value(config, 'RI_PURCHASES', 'EXPIRATION_DAYS', '0'))
+
         ris = []
         if role != '':
             session = utils.assume_role(boto3.Session(), role)
@@ -46,18 +49,25 @@ def load(config):
             while True:
                 groups = rsp['UtilizationsByTime'][0]['Groups']
                 for row in groups:
+                    # Skip our skip accounts.
+                    if row['Attributes']['accountId'] in skip_accounts:
+                        continue
+
                     # Make sure to only capture active RIs
                     endDate = datetime.datetime.strptime(row['Attributes']['endDateTime'], "%Y-%m-%dT%H:%M:%S.000Z")
-                    if endDate.date() > datetime.date.today():
+                    if endDate.date() > datetime.date.today() + datetime.timedelta(days=expiration_days):
 
                         # these mappings are needed for CUR compatibility
                         # the current pricing report uses the following operating systems:
                         # Linux, RHEL, SUSE, Windows  
                         platform = row['Attributes']['platform']
                         if platform == 'Linux/UNIX':
-                             operatingSystem = 'Linux'
+                            operatingSystem = 'Linux'
                         elif platform == 'Red Hat Enterprise Linux':
-                             operatingSystem = 'RHEL'
+                            operatingSystem = 'RHEL'
+                        elif platform.startswith("Windows "):
+                            # Windows with * missing from pricing data.
+                            continue
                         else:
                             operatingSystem = platform
 

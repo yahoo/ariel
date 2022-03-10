@@ -8,6 +8,7 @@ import io
 import os
 import pandas as pd
 import pg8000
+import ssl
 import sys
 
 def lambda_main(config):
@@ -54,10 +55,12 @@ def lambda_main(config):
     if pgdb != '':
         ca_cache = '/tmp/cached-rds-ca.pem'
         boto3.resource('s3').Bucket('rds-downloads').download_file('rds-ca-2019-root.pem', ca_cache)
-        ssl = { 'ca_certs': ca_cache }
+        ssl_context = ssl.SSLContext()
+        ssl_context.verify_mode = ssl.CERT_REQUIRED
+        ssl_context.load_verify_locations(ca_cache)
         connect_host = utils.get_config_value(config, 'PG_REPORTS', 'CONNECT_HOST', pgdb)
         token = boto3.client('rds').generate_db_auth_token(pgdb, 5432, 'ariel_rw')
-        conn = pg8000.connect(host=connect_host, port=5432, ssl=ssl, database='ariel', user='ariel_rw', password=token)
+        conn = pg8000.connect(host=connect_host, port=5432, ssl_context=ssl_context, database='ariel', user='ariel_rw', password=token)
 
     for key, report in reports.items():
         store_index = type(report.index) != pd.RangeIndex and len(report) > 0
