@@ -5,7 +5,7 @@ following information provides a guide for making contributions.
 ## Code of Conduct
 
 By participating in this project, you agree to abide by the
-[Verizon Media Code of Conduct](Code-of-Conduct.md). Everyone is welcome
+[Yahoo, Inc's Code of Conduct](Code-of-Conduct.md). Everyone is welcome
 to submit a pull request or open an issue to improve the documentation,
 add improvements, or report bugs.
 
@@ -32,12 +32,7 @@ something new, please
 discuss it.
 
 #### Creating a Pull Request
-Before you submit any code, we need you to agree to our
-[Contributor License Agreement](https://yahoocla.herokuapp.com/); this
-ensures we can continue to protect your contributions under an open
-source license well into the future.
-
-Please follow
+Please follow 
 [best practices](https://github.com/trein/dev-best-practices/wiki/Git-Commit-Best-Practices)
 for creating git commits.
 
